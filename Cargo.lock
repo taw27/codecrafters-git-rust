@@ -305,6 +305,7 @@ dependencies = [
  "hex",
  "reqwest",
  "sha1",
+ "tempfile",
  "thiserror",
  "tokio",
 ]
