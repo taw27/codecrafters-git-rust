@@ -5,6 +5,14 @@ pub struct GitObject {
 }
 
 impl GitObject {
+    pub fn new(size: i32, object_type: String, content: String) -> Self {
+        Self {
+            size,
+            object_type,
+            content,
+        }
+    }
+
     pub fn from_object_file_string(file_string: &str) -> Result<Self, String> {
         let split_file_string: Vec<&str> = file_string.split('\0').collect();
 
@@ -26,6 +34,10 @@ impl GitObject {
             object_type: non_content_parts[0].to_string(),
             content: split_file_string[1].to_string(),
         })
+    }
+
+    pub fn to_object_file_string(&self) -> String {
+        format!("{} {}\0{}", self.object_type, self.size, self.content)
     }
 }
 

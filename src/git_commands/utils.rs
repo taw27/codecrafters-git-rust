@@ -1,8 +1,11 @@
 use std::error::Error;
+use std::fs;
 use std::fs::File;
-use std::io::Read;
+use std::io::{Read, Write};
+use std::path::Path;
 
-use flate2::read::ZlibDecoder;
+use flate2::Compression;
+use flate2::read::{ZlibDecoder, ZlibEncoder};
 use sha1::{Digest, Sha1};
 
 pub fn get_object_path(sha: &str) -> Result<String, &'static str> {
@@ -19,10 +22,10 @@ pub fn get_object_path(sha: &str) -> Result<String, &'static str> {
     Ok(object_path)
 }
 
-pub fn get_sha<R: Read>(reader: &mut R) -> Result<String, Box<dyn Error>> {
+pub fn get_sha(content: &str) -> Result<String, Box<dyn Error>> {
     let mut hasher = Sha1::new();
 
-    std::io::copy(reader, &mut hasher)?;
+    hasher.update(content);
 
     let result = hasher.finalize();
     let sha = format!("{:x}", result);
@@ -41,38 +44,36 @@ pub fn read_and_decompress_file(path: &str) -> Result<String, Box<dyn Error>> {
     Ok(decompressed_content)
 }
 
+pub fn compress_and_write_file(path: &str, content: &str) -> Result<(), Box<dyn Error>> {
+    let parent_dir = Path::new(path).parent().ok_or("Invalid path")?;
+    fs::create_dir_all(parent_dir)?;
+
+    let mut file = File::create(path)?;
+    let mut compressed_content = Vec::new();
+    let mut encoder = ZlibEncoder::new(content.as_bytes(), Compression::default());
+
+    encoder.read_to_end(&mut compressed_content)?;
+
+    file.write_all(&compressed_content)?;
+
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
-    use std::io::Cursor;
     use std::io::Write;
 
     use flate2::bufread::ZlibEncoder;
     use flate2::Compression;
+    use tempfile::NamedTempFile;
 
     use super::*;
 
     #[test]
     fn get_sha_returns_correct_sha_for_given_input() {
         let data = "Hello, world!";
-        let mut cursor = Cursor::new(data);
-        let sha = get_sha(&mut cursor).unwrap();
+        let sha = get_sha(data).unwrap();
         assert_eq!(sha, "943a702d06f34599aee1f8da8ef9f7296031d699");
-    }
-
-    #[test]
-    fn get_sha_returns_error_for_io_failure() {
-        struct FailingReader;
-        impl Read for FailingReader {
-            fn read(&mut self, _buf: &mut [u8]) -> std::io::Result<usize> {
-                Err(std::io::Error::new(
-                    std::io::ErrorKind::Other,
-                    "forced failure",
-                ))
-            }
-        }
-        let mut reader = FailingReader;
-        let result = get_sha(&mut reader);
-        assert!(result.is_err());
     }
 
     #[test]
@@ -128,4 +129,59 @@ mod tests {
         let result = read_and_decompress_file(temp_file_path);
         assert!(result.is_err());
     }
+    #[test]
+    fn compress_and_write_file_creates_file_with_correct_content() {
+        let content = "Hello, world!";
+        let temp_file = NamedTempFile::new().unwrap();
+        let temp_file_path = temp_file.path().to_str().unwrap();
+
+        compress_and_write_file(temp_file_path, content).unwrap();
+
+        let file = File::open(temp_file_path).unwrap();
+        let mut decompressed_content = String::new();
+        let mut decoder = ZlibDecoder::new(file);
+        decoder.read_to_string(&mut decompressed_content).unwrap();
+
+        assert_eq!(decompressed_content, content);
+    }
+
+    #[test]
+    fn compress_and_write_file_overwrites_existing_file_content() {
+        let initial_content = "Initial content";
+        let new_content = "New content";
+        let temp_file = NamedTempFile::new().unwrap();
+        let temp_file_path = temp_file.path().to_str().unwrap();
+
+        compress_and_write_file(temp_file_path, initial_content).unwrap();
+        compress_and_write_file(temp_file_path, new_content).unwrap();
+
+        let file = File::open(temp_file_path).unwrap();
+        let mut decompressed_content = String::new();
+        let mut decoder = ZlibDecoder::new(file);
+        decoder.read_to_string(&mut decompressed_content).unwrap();
+
+        assert_eq!(decompressed_content, new_content);
+    }
+
+    #[test]
+    fn compress_and_write_file_returns_error_for_invalid_path() {
+        let content = "Hello, world!";
+        let path = "\0";
+
+        let result = compress_and_write_file(path, content);
+
+        assert!(result.is_err());
+    }
 }
+
+pub trait ObjectPathGetter {
+    fn get_object_path(&self, sha: &str) -> Result<String, &'static str>;
+}
+
+impl ObjectPathGetter for ActualObjectPathGetter {
+    fn get_object_path(&self, sha: &str) -> Result<String, &'static str> {
+        get_object_path(sha)
+    }
+}
+
+pub struct ActualObjectPathGetter {}

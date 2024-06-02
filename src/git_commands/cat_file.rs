@@ -1,19 +1,7 @@
 use std::io::Write;
 
-use crate::git_commands::utils::{get_object_path, read_and_decompress_file};
+use crate::git_commands::utils::{ObjectPathGetter, read_and_decompress_file};
 use crate::models::GitObject;
-
-pub trait ObjectPathGetter {
-    fn get_object_path(&self, sha: &str) -> Result<String, &'static str>;
-}
-
-pub struct ActualObjectPathGetter {}
-
-impl ObjectPathGetter for ActualObjectPathGetter {
-    fn get_object_path(&self, sha: &str) -> Result<String, &'static str> {
-        get_object_path(sha)
-    }
-}
 
 pub fn cat_file<O: ObjectPathGetter, W: Write>(
     sha: &str,
