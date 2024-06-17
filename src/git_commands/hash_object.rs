@@ -3,7 +3,7 @@ use std::io::Read;
 use std::io::Write;
 
 use crate::git_commands::utils::{compress_and_write_file, get_sha, ObjectPathGetter};
-use crate::models::GitObject;
+use crate::models::git_object::{GitObject, Object, PrintContent};
 
 pub fn hash_object<O: ObjectPathGetter, W: Write>(
     file_path: &str,
@@ -17,14 +17,14 @@ pub fn hash_object<O: ObjectPathGetter, W: Write>(
         _ => return Err("flag not recognized, Available flags: -w".to_string()),
     };
     let mut file = File::open(file_path).map_err(|err| format!("error opening file: {}", err))?;
-    let mut contents = String::new();
+    let mut contents: Vec<u8> = Vec::new();
 
     let content_size = file
-        .read_to_string(&mut contents)
+        .read_to_end(&mut contents)
         .map_err(|err| format!("error opening file: {}", err))?;
 
-    let git_object = GitObject::new(content_size as i32, "blob".to_string(), contents);
-    let object_file_string = git_object.to_object_file_string();
+    let git_object = GitObject::new(content_size as i32, Object::new("blob", contents)?);
+    let object_file_string = git_object.print_content();
     let sha = get_sha(&object_file_string)
         .map_err(|err| format!("error constructing sha from contents: {}", err))?;
 

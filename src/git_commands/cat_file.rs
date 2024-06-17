@@ -1,7 +1,7 @@
 use std::io::Write;
 
 use crate::git_commands::utils::{ObjectPathGetter, read_and_decompress_file};
-use crate::models::GitObject;
+use crate::models::git_object::{GitObject, PrintContent};
 
 pub fn cat_file<O: ObjectPathGetter, W: Write>(
     sha: &str,
@@ -16,13 +16,18 @@ pub fn cat_file<O: ObjectPathGetter, W: Write>(
     let object_path = object_path_getter.get_object_path(sha)?;
     let decompressed_content = match read_and_decompress_file(&object_path.as_str()) {
         Ok(c) => c,
-        Err(e) => return Err(e.to_string()),
+        Err(e) => {
+            return Err(format!(
+                "Error reading and decompressing file: {}",
+                e.to_string()
+            ))
+        }
     };
 
-    let git_object = GitObject::from_object_file_string(decompressed_content.as_str())?;
+    let git_object = GitObject::from_object_file_buffer(&decompressed_content)?;
 
     writer
-        .write_all(git_object.content.as_bytes())
+        .write_all(git_object.print_content().as_bytes())
         .expect("error writing content");
 
     Ok(())
@@ -109,23 +114,14 @@ mod tests {
     pub fn cat_file_fails_with_invalid_sha() {
         let mut writer = Cursor::new(Vec::new());
 
-        struct MockObjectPathGetter {
-            file_path: String,
-        }
+        struct MockObjectPathGetter {}
         impl ObjectPathGetter for MockObjectPathGetter {
             fn get_object_path(&self, _sha: &str) -> Result<String, &'static str> {
                 Err("invalid sha")
             }
         }
 
-        let result = cat_file(
-            "invalid_sha",
-            "-p",
-            MockObjectPathGetter {
-                file_path: "some_path".to_string(),
-            },
-            &mut writer,
-        );
+        let result = cat_file("invalid_sha", "-p", MockObjectPathGetter {}, &mut writer);
 
         assert!(result.is_err());
         assert_eq!(result.unwrap_err(), "invalid sha");

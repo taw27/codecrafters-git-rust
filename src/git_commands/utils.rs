@@ -33,15 +33,15 @@ pub fn get_sha(content: &str) -> Result<String, Box<dyn Error>> {
     Ok(sha)
 }
 
-pub fn read_and_decompress_file(path: &str) -> Result<String, Box<dyn Error>> {
+pub fn read_and_decompress_file(path: &str) -> Result<Vec<u8>, Box<dyn Error>> {
     let file = File::open(path)?;
-    let mut decompressed_content = String::new();
+    let mut decompressed_content_buffer = Vec::new();
 
     let mut decoder = ZlibDecoder::new(file);
 
-    decoder.read_to_string(&mut decompressed_content)?;
+    decoder.read_to_end(&mut decompressed_content_buffer)?;
 
-    Ok(decompressed_content)
+    Ok(decompressed_content_buffer)
 }
 
 pub fn compress_and_write_file(path: &str, content: &str) -> Result<(), Box<dyn Error>> {
@@ -107,7 +107,11 @@ mod tests {
         let temp_file_path = temp_file.path().to_str().unwrap();
 
         let decompressed_content = read_and_decompress_file(temp_file_path).unwrap();
-        assert_eq!(decompressed_content, content);
+
+        assert_eq!(
+            String::from_utf8(decompressed_content).unwrap().to_string(),
+            content
+        );
     }
 
     #[test]
