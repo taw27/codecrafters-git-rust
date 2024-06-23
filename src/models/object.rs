@@ -33,7 +33,7 @@ impl GetContent for Object {
     fn get_content(&self) -> Result<String, String> {
         match self {
             Object::Blob(blob) => blob.get_content(),
-            _ => panic!("Not implemented"),
+            Object::Tree(tree) => tree.get_content(),
         }
     }
 }
