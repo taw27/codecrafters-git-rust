@@ -27,7 +27,7 @@ pub fn cat_file<O: ObjectPathGetter, W: Write>(
     let git_object = GitObject::from_object_file_buffer(&decompressed_content)?;
 
     writer
-        .write_all(git_object.print_content().as_bytes())
+        .write_all(git_object.print_content()?.as_bytes())
         .expect("error writing content");
 
     Ok(())

@@ -1,6 +1,6 @@
 use core::str;
 
-use crate::models::tree_object::TreeObject;
+use crate::models::object::Object;
 
 pub struct GitObject {
     pub size: i32,
@@ -20,7 +20,8 @@ impl GitObject {
             .iter()
             .position(|&x| x == 0)
             .ok_or_else(|| "not a valid git object file".to_string())?;
-        let (header, content) = file_buffer.split_at(null_position);
+        let header = &file_buffer[0..null_position];
+        let content = &file_buffer[null_position + 1..];
         let header_str = str::from_utf8(header)
             .map_err(|err| format!("error parsing git object header: {}", err))?;
         let header_parts: Vec<&str> = header_str.split(" ").collect();
@@ -35,65 +36,13 @@ impl GitObject {
     }
 }
 impl PrintContent for GitObject {
-    fn print_content(&self) -> &String {
+    fn print_content(&self) -> Result<String, String> {
         self.object.print_content()
     }
 }
 
-#[derive(Debug, PartialEq)]
-struct Blob {
-    content: String,
-}
-
-impl Blob {
-    fn from_buffer(content: &Vec<u8>) -> Result<Self, String> {
-        Ok(Self {
-            content: str::from_utf8(content)
-                .map_err(|err| format!("error parsing blob content: {}", err))?
-                .to_string(),
-        })
-    }
-    fn print_content(&self) -> &String {
-        &self.content
-    }
-}
-
-#[derive(Debug, PartialEq)]
-pub enum Object {
-    Blob(Blob),
-    Tree(TreeObject),
-}
-
 pub trait PrintContent {
-    fn print_content(&self) -> &String;
-}
-
-impl Object {
-    pub fn new(type_str: &str, content: Vec<u8>) -> Result<Self, String> {
-        let object_type = match type_str {
-            "blob" => Object::Blob(Blob::from_buffer(&content)?),
-            "tree" => Object::Tree(TreeObject::new()),
-            _ => return Err(format!("Object type not recognized: {}", type_str)),
-        };
-
-        Ok(object_type)
-    }
-
-    pub fn get_type(&self) -> &'static str {
-        match self {
-            Object::Blob(_) => "blob",
-            Object::Tree(_) => "tree",
-        }
-    }
-}
-
-impl PrintContent for Object {
-    fn print_content(&self) -> &String {
-        match self {
-            Object::Blob(blob) => blob.print_content(),
-            _ => panic!("Not implemented"),
-        }
-    }
+    fn print_content(&self) -> Result<String, String>;
 }
 
 #[cfg(test)]
@@ -107,7 +56,7 @@ mod tests {
 
         assert_eq!(git_object.size, 6);
         assert_eq!(git_object.object.get_type(), "blob");
-        assert_eq!(git_object.print_content(), "content");
+        assert_eq!(&git_object.print_content().unwrap(), "content");
     }
 
     #[test]
