@@ -1,3 +1,7 @@
+use std::fmt;
+
+use crate::models::git_object::GetContent;
+
 #[derive(Debug, PartialEq)]
 pub struct Tree {
     tree_entries: Vec<TreeEntry>,
@@ -71,6 +75,43 @@ impl Tree {
     }
 }
 
+impl GetContent for Tree {
+    fn get_content(&self) -> Result<String, String> {
+        let mut content: String = String::new();
+
+        for tree_entry in &self.tree_entries {
+            let entry_content = format!(
+                "{} {} {} {}",
+                tree_entry.mode,
+                tree_entry.object_type(),
+                tree_entry.sha,
+                tree_entry.name
+            );
+
+            content.push_str(entry_content.as_str());
+
+            content.push_str("\n");
+        }
+
+        print!("{}", content);
+        Ok(content)
+    }
+}
+
+impl Tree {
+    pub fn get_names(&self) -> String {
+        let mut names: String = String::new();
+
+        for tree_entry in &self.tree_entries {
+            names.push_str(tree_entry.name.as_str());
+
+            names.push_str("\n");
+        }
+
+        names
+    }
+}
+
 #[derive(Debug, PartialEq)]
 struct TreeEntry {
     mode: TreeEntryMode,
@@ -101,7 +142,7 @@ impl TreeEntryMode {
             "100644" => TreeEntryMode::RegularFile,
             "100755" => TreeEntryMode::ExecutableFile,
             "120000" => TreeEntryMode::SymbolicLink,
-            "040000" => TreeEntryMode::Directory,
+            "40000" => TreeEntryMode::Directory,
             _ => {
                 return Err(format!(
                     "tree entry mode string not recognized (Given {})",
@@ -111,6 +152,19 @@ impl TreeEntryMode {
         };
 
         Ok(mode)
+    }
+}
+
+impl fmt::Display for TreeEntryMode {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let mode_str = match self {
+            TreeEntryMode::RegularFile => "100644",
+            TreeEntryMode::ExecutableFile => "100755",
+            TreeEntryMode::SymbolicLink => "120000",
+            TreeEntryMode::Directory => "040000",
+        };
+
+        write!(f, "{}", mode_str)
     }
 }
 
@@ -172,5 +226,71 @@ mod tests {
             TreeEntryMode::ExecutableFile
         );
         assert_eq!(tree_object.tree_entries[1].name, "exec_file");
+    }
+
+    #[test]
+    fn get_content_returns_correct_format_for_single_entry() {
+        let tree_entries = vec![TreeEntry {
+            mode: TreeEntryMode::RegularFile,
+            sha: "abc123".to_string(),
+            name: "file1.txt".to_string(),
+        }];
+        let tree = Tree { tree_entries };
+
+        let content = tree.get_content().unwrap();
+
+        assert_eq!(content, "100644 blob abc123 file1.txt\n");
+    }
+
+    #[test]
+    fn get_content_returns_correct_format_for_multiple_entries() {
+        let tree_entries = vec![
+            TreeEntry {
+                mode: TreeEntryMode::RegularFile,
+                sha: "abc123".to_string(),
+                name: "file1.txt".to_string(),
+            },
+            TreeEntry {
+                mode: TreeEntryMode::ExecutableFile,
+                sha: "def456".to_string(),
+                name: "file2.txt".to_string(),
+            },
+        ];
+        let tree = Tree { tree_entries };
+
+        let content = tree.get_content().unwrap();
+
+        assert_eq!(
+            content,
+            "100644 blob abc123 file1.txt\n100755 blob def456 file2.txt\n"
+        );
+    }
+
+    #[test]
+    fn get_content_returns_correct_format_for_directory_entry() {
+        let tree_entries = vec![TreeEntry {
+            mode: TreeEntryMode::Directory,
+            sha: "abc123".to_string(),
+            name: "dir1".to_string(),
+        }];
+        let tree = Tree { tree_entries };
+
+        let content = tree.get_content().unwrap();
+
+        assert_eq!(content, "040000 tree abc123 dir1\n");
+    }
+
+    #[test]
+    fn get_content_returns_correct_format_for_symbolic_link_entry() {
+        let tree_entries = vec![TreeEntry {
+            mode: TreeEntryMode::SymbolicLink,
+            sha: "abc123".to_string(),
+            name: "link1".to_string(),
+        }];
+        let tree = Tree { tree_entries };
+
+        let content = tree.get_content().unwrap();
+
+        assert_eq!(content, "120000 blob abc123 link1\n");
     }
 }

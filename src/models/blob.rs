@@ -1,6 +1,6 @@
 use std::str;
 
-use crate::models::git_object::PrintContent;
+use crate::models::git_object::GetContent;
 
 #[derive(Debug, PartialEq)]
 pub struct Blob {
@@ -13,8 +13,8 @@ impl Blob {
     }
 }
 
-impl PrintContent for Blob {
-    fn print_content(&self) -> Result<String, String> {
+impl GetContent for Blob {
+    fn get_content(&self) -> Result<String, String> {
         Ok(str::from_utf8(&self.content)
             .map_err(|err| format!("error parsing blob content: {}", err))?
             .to_string())

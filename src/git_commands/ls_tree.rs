@@ -1,4 +1,9 @@
-#[cfg(feature = "wip")]
+use std::io::Write;
+
+use crate::git_commands::utils::{ObjectPathGetter, read_and_decompress_file};
+use crate::models::git_object::{GetContent, GitObject};
+use crate::models::object::Object;
+
 pub fn ls_tree<O: ObjectPathGetter, W: Write>(
     sha: &str,
     flag: &Option<&str>,
@@ -13,11 +18,23 @@ pub fn ls_tree<O: ObjectPathGetter, W: Write>(
     let object_path = object_path_getter.get_object_path(sha)?;
     let decompressed_content =
         read_and_decompress_file(&object_path.as_str()).map_err(|e| e.to_string())?;
-    let git_object = GitObject::from_object_file_buffer(decompressed_content.as_str())?;
+
+    let git_object = GitObject::from_object_file_buffer(&decompressed_content)?;
+
+    let to_print: String = match git_object.object {
+        Object::Blob(_) => return Err("not a tree object".to_string()),
+        Object::Tree(tree) => {
+            if name_only {
+                tree.get_names()
+            } else {
+                tree.get_content()?
+            }
+        }
+    };
 
     writer
-        .write_all(git_object.content.as_bytes())
-        .expect("error writing content");
+        .write_all(to_print.as_bytes())
+        .map_err(|e| e.to_string())?;
 
     Ok(())
 }

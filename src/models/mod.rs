@@ -1,4 +1,4 @@
-mod blob;
+pub mod blob;
 pub mod git_object;
 pub mod object;
-mod tree;
+pub mod tree;

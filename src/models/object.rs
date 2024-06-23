@@ -1,7 +1,7 @@
 use core::str;
 
 use crate::models::blob::Blob;
-use crate::models::git_object::PrintContent;
+use crate::models::git_object::GetContent;
 use crate::models::tree::Tree;
 
 #[derive(Debug, PartialEq)]
@@ -29,10 +29,10 @@ impl Object {
     }
 }
 
-impl PrintContent for Object {
-    fn print_content(&self) -> Result<String, String> {
+impl GetContent for Object {
+    fn get_content(&self) -> Result<String, String> {
         match self {
-            Object::Blob(blob) => blob.print_content(),
+            Object::Blob(blob) => blob.get_content(),
             _ => panic!("Not implemented"),
         }
     }

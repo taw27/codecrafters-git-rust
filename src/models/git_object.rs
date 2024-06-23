@@ -35,14 +35,14 @@ impl GitObject {
         })
     }
 }
-impl PrintContent for GitObject {
-    fn print_content(&self) -> Result<String, String> {
-        self.object.print_content()
+impl GetContent for GitObject {
+    fn get_content(&self) -> Result<String, String> {
+        self.object.get_content()
     }
 }
 
-pub trait PrintContent {
-    fn print_content(&self) -> Result<String, String>;
+pub trait GetContent {
+    fn get_content(&self) -> Result<String, String>;
 }
 
 #[cfg(test)]
@@ -56,7 +56,7 @@ mod tests {
 
         assert_eq!(git_object.size, 6);
         assert_eq!(git_object.object.get_type(), "blob");
-        assert_eq!(&git_object.print_content().unwrap(), "content");
+        assert_eq!(&git_object.get_content().unwrap(), "content");
     }
 
     #[test]
