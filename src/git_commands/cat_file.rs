@@ -1,7 +1,7 @@
 use std::io::Write;
 
-use crate::git_commands::utils::{ObjectPathGetter, read_and_decompress_file};
-use crate::models::git_object::{GetContent, GitObject};
+use crate::git_commands::utils::{read_and_decompress_file, ObjectPathGetter};
+use crate::models::git_object::{GetContentString, GitObject};
 
 pub fn cat_file<O: ObjectPathGetter, W: Write>(
     sha: &str,
@@ -27,7 +27,7 @@ pub fn cat_file<O: ObjectPathGetter, W: Write>(
     let git_object = GitObject::from_object_file_buffer(&decompressed_content)?;
 
     writer
-        .write_all(git_object.get_content()?.as_bytes())
+        .write_all(git_object.get_content_string()?.as_bytes())
         .map_err(|e| e.to_string())?;
 
     Ok(())

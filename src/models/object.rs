@@ -1,7 +1,7 @@
 use core::str;
 
 use crate::models::blob::Blob;
-use crate::models::git_object::GetContent;
+use crate::models::git_object::GetContentString;
 use crate::models::tree::Tree;
 
 #[derive(Debug, PartialEq)]
@@ -29,11 +29,11 @@ impl Object {
     }
 }
 
-impl GetContent for Object {
-    fn get_content(&self) -> Result<String, String> {
+impl GetContentString for Object {
+    fn get_content_string(&self) -> Result<String, String> {
         match self {
-            Object::Blob(blob) => blob.get_content(),
-            Object::Tree(tree) => tree.get_content(),
+            Object::Blob(blob) => blob.get_content_string(),
+            Object::Tree(tree) => tree.get_content_string(),
         }
     }
 }

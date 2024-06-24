@@ -34,15 +34,22 @@ impl GitObject {
             object: Object::new(header_parts[0], content.to_vec())?,
         })
     }
+
+    pub fn get_content(&self) -> &Vec<u8> {
+        match &self.object {
+            Object::Blob(blob) => &blob.content,
+            Object::Tree(tree) => &tree.content,
+        }
+    }
 }
-impl GetContent for GitObject {
-    fn get_content(&self) -> Result<String, String> {
-        self.object.get_content()
+impl GetContentString for GitObject {
+    fn get_content_string(&self) -> Result<String, String> {
+        self.object.get_content_string()
     }
 }
 
-pub trait GetContent {
-    fn get_content(&self) -> Result<String, String>;
+pub trait GetContentString {
+    fn get_content_string(&self) -> Result<String, String>;
 }
 
 #[cfg(test)]
@@ -56,7 +63,7 @@ mod tests {
 
         assert_eq!(git_object.size, 6);
         assert_eq!(git_object.object.get_type(), "blob");
-        assert_eq!(&git_object.get_content().unwrap(), "content");
+        assert_eq!(&git_object.get_content_string().unwrap(), "content");
     }
 
     #[test]

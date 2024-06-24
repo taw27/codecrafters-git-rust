@@ -1,20 +1,22 @@
 use std::fmt;
 
-use crate::models::git_object::GetContent;
+use crate::models::git_object::GetContentString;
 
 #[derive(Debug, PartialEq)]
 pub struct Tree {
-    tree_entries: Vec<TreeEntry>,
+    pub tree_entries: Vec<TreeEntry>,
+    pub content: Vec<u8>,
 }
 
 impl Tree {
     pub fn new(content: Vec<u8>) -> Result<Self, String> {
         Ok(Self {
-            tree_entries: Self::content_to_tree_entries(content)?,
+            tree_entries: Self::content_to_tree_entries(&content)?,
+            content,
         })
     }
 
-    fn content_to_tree_entries(content: Vec<u8>) -> Result<Vec<TreeEntry>, String> {
+    fn content_to_tree_entries(content: &Vec<u8>) -> Result<Vec<TreeEntry>, String> {
         let mut tree_entries: Vec<TreeEntry> = Vec::new();
         let mut content_slice = &content[0..];
 
@@ -75,8 +77,8 @@ impl Tree {
     }
 }
 
-impl GetContent for Tree {
-    fn get_content(&self) -> Result<String, String> {
+impl GetContentString for Tree {
+    fn get_content_string(&self) -> Result<String, String> {
         let mut content: String = String::new();
 
         for tree_entry in &self.tree_entries {
@@ -113,7 +115,7 @@ impl Tree {
 }
 
 #[derive(Debug, PartialEq)]
-struct TreeEntry {
+pub struct TreeEntry {
     mode: TreeEntryMode,
     sha: String,
     name: String,
@@ -235,9 +237,12 @@ mod tests {
             sha: "abc123".to_string(),
             name: "file1.txt".to_string(),
         }];
-        let tree = Tree { tree_entries };
+        let tree = Tree {
+            tree_entries,
+            content: Vec::new(),
+        };
 
-        let content = tree.get_content().unwrap();
+        let content = tree.get_content_string().unwrap();
 
         assert_eq!(content, "100644 blob abc123 file1.txt\n");
     }
@@ -256,9 +261,12 @@ mod tests {
                 name: "file2.txt".to_string(),
             },
         ];
-        let tree = Tree { tree_entries };
+        let tree = Tree {
+            tree_entries,
+            content: Vec::new(),
+        };
 
-        let content = tree.get_content().unwrap();
+        let content = tree.get_content_string().unwrap();
 
         assert_eq!(
             content,
@@ -273,9 +281,12 @@ mod tests {
             sha: "abc123".to_string(),
             name: "dir1".to_string(),
         }];
-        let tree = Tree { tree_entries };
+        let tree = Tree {
+            tree_entries,
+            content: Vec::new(),
+        };
 
-        let content = tree.get_content().unwrap();
+        let content = tree.get_content_string().unwrap();
 
         assert_eq!(content, "040000 tree abc123 dir1\n");
     }
@@ -287,9 +298,12 @@ mod tests {
             sha: "abc123".to_string(),
             name: "link1".to_string(),
         }];
-        let tree = Tree { tree_entries };
+        let tree = Tree {
+            tree_entries,
+            content: Vec::new(),
+        };
 
-        let content = tree.get_content().unwrap();
+        let content = tree.get_content_string().unwrap();
 
         assert_eq!(content, "120000 blob abc123 link1\n");
     }

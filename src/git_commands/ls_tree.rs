@@ -1,7 +1,7 @@
 use std::io::Write;
 
 use crate::git_commands::utils::{ObjectPathGetter, read_and_decompress_file};
-use crate::models::git_object::{GetContent, GitObject};
+use crate::models::git_object::{GetContentString, GitObject};
 use crate::models::object::Object;
 
 pub fn ls_tree<O: ObjectPathGetter, W: Write>(
@@ -27,7 +27,7 @@ pub fn ls_tree<O: ObjectPathGetter, W: Write>(
             if name_only {
                 tree.get_names()
             } else {
-                tree.get_content()?
+                tree.get_content_string()?
             }
         }
     };
